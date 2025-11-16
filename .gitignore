@@ -1,0 +1,17 @@
+# Directorio del entorno virtual de Python
+env/
+
+# Directorio de módulos de Node.js
+node_modules/
+
+# Directorios de caché de Python
+__pycache__/
+
+# Base de datos local
+*.db
+
+# Archivos de la base de datos específica (si no es *.db)
+servicio.db
+
+# Archivos compilados o temporales (pueden variar, pero son comunes)
+*.pyc

@@ -1,0 +1,306 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .scanner-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    h1 {
+        text-align: center;
+        color: #333;
+        margin-bottom: 20px;
+    }
+    
+    #reader {
+        border: 3px solid #667eea;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 20px auto;
+        max-width: 500px;
+    }
+    
+    .controls {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin: 20px 0;
+    }
+    
+    button {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    #startBtn {
+        background: #667eea;
+        color: white;
+    }
+    
+    #startBtn:hover:not(:disabled) {
+        background: #5568d3;
+    }
+    
+    #stopBtn {
+        background: #f56565;
+        color: white;
+    }
+    
+    #stopBtn:hover:not(:disabled) {
+        background: #e53e3e;
+    }
+    
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    #result {
+        background: #f7fafc;
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+        display: none;
+        animation: slideIn 0.3s ease;
+    }
+    
+    #result.show {
+        display: block;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .result-label {
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 10px;
+    }
+    
+    .result-text {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        word-break: break-all;
+        border-left: 4px solid #667eea;
+    }
+    
+    .status {
+        text-align: center;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-weight: 500;
+    }
+    
+    .status.info {
+        background: #bee3f8;
+        color: #2c5282;
+    }
+    
+    .status.success {
+        background: #c6f6d5;
+        color: #22543d;
+    }
+    
+    .status.error {
+        background: #fed7d7;
+        color: #742a2a;
+    }
+    
+    .status.loading {
+        background: #fef5e7;
+        color: #7d6608;
+    }
+</style>
+
+<div class="scanner-container">
+    <h1>📱 Escanear Código QR</h1>
+    
+    <div id="status" class="status info">
+        Presiona "Iniciar Escáner" para comenzar
+    </div>
+    
+    <div id="reader"></div>
+    
+    <div class="controls">
+        <button id="startBtn">Iniciar Escáner</button>
+        <button id="stopBtn" disabled>Detener Escáner</button>
+    </div>
+    
+    <div id="result">
+        <div class="result-label">Código detectado:</div>
+        <div id="result-text" class="result-text"></div>
+        <div id="server-response" style="margin-top: 15px;"></div>
+    </div>
+</div>
+
+<!-- Importar la librería desde CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+    let html5QrCode;
+    let isScanning = false;
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const resultContainer = document.getElementById('result');
+    const resultText = document.getElementById('result-text');
+    const statusElement = document.getElementById('status');
+    const serverResponse = document.getElementById('server-response');
+
+    function updateStatus(message, type = 'info') {
+        statusElement.textContent = message;
+        statusElement.className = `status ${type}`;
+    }
+
+    function escanear_qr(decodedText, decodedResult) {
+        // Evitar escaneos múltiples del mismo código
+        if (isScanning) {
+            return;
+        }
+        isScanning = true;
+
+        // Mostrar resultado inmediatamente
+        resultText.textContent = decodedText;
+        resultContainer.classList.add('show');
+        updateStatus('Código detectado - Enviando al servidor...', 'loading');
+
+        // Vibración si está disponible
+        if (navigator.vibrate) {
+            navigator.vibrate(200);
+        }
+
+        // Obtener el token CSRF
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value 
+                       || getCookie('csrftoken');
+
+        // Enviar al servidor
+        fetch('/leer_qr', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ qr_data: decodedText })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Respuesta del servidor:', data);
+            updateStatus('¡Código procesado exitosamente!', 'success');
+            
+            // Mostrar respuesta del servidor
+            serverResponse.innerHTML = `
+                <div style="background: #e6fffa; padding: 10px; border-radius: 5px; border-left: 4px solid #38b2ac;">
+                    <strong>Respuesta del servidor:</strong><br>
+                    ${JSON.stringify(data, null, 2)}
+                </div>
+            `;
+            
+            // Permitir escanear de nuevo después de 2 segundos
+            setTimeout(() => {
+                isScanning = false;
+                updateStatus('Listo para escanear otro código', 'info');
+            }, 2000);
+        })
+        .catch(error => {
+            console.error('Error en fetch:', error);
+            updateStatus(`Error al procesar: ${error.message}`, 'error');
+            serverResponse.innerHTML = `
+                <div style="background: #fff5f5; padding: 10px; border-radius: 5px; border-left: 4px solid #fc8181;">
+                    <strong>Error:</strong> ${error.message}
+                </div>
+            `;
+            isScanning = false;
+        });
+    }
+
+    function onScanFailure(error) {
+        // No hacer nada, los errores de escaneo son normales mientras busca códigos
+    }
+
+    // Función para obtener cookie CSRF
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Iniciar escáner
+    startBtn.addEventListener('click', async () => {
+        try {
+            html5QrCode = new Html5Qrcode("reader");
+            
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                {
+                    fps: 10,
+                    qrbox: { width: 250, height: 250 }
+                },
+                escanear_qr,
+                onScanFailure
+            );
+            
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            updateStatus('Escáner activo - Apunta a un código QR', 'info');
+            
+        } catch (err) {
+            console.error("Error al iniciar la cámara:", err);
+            updateStatus(`Error al iniciar cámara: ${err}`, 'error');
+        }
+    });
+
+    // Detener escáner
+    stopBtn.addEventListener('click', async () => {
+        try {
+            if (html5QrCode) {
+                await html5QrCode.stop();
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+                updateStatus('Escáner detenido', 'info');
+                isScanning = false;
+            }
+        } catch (err) {
+            console.error("Error al detener:", err);
+            updateStatus(`Error al detener: ${err}`, 'error');
+        }
+    });
+
+    // Limpiar al salir de la página
+    window.addEventListener('beforeunload', async () => {
+        if (html5QrCode && !stopBtn.disabled) {
+            await html5QrCode.stop().catch(err => console.error(err));
+        }
+    });
+</script>
+{% endblock %}

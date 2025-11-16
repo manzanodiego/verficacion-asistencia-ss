@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+
+{%block content%}
+<div class="card card-body">
+    <form action="" method="post">
+        <input type="text" placeholder="numero_control" name="numero_control" id="numero_control" class="form form-control ">
+        <br>
+        <button type="submit" class="btn btn-success">Generar Qr</button>
+    </form>
+</div>
+<br>
+    {%if qr_code %}
+    <div class="row justify-content-center">
+        <h1>Codigo generado</h1>
+        <img src="data:image/png;base64,{{qr_code}}" alt="qrcode" class="mt-2">
+    </div>   
+    {% endif %}
+
+
+{%endblock%}

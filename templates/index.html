@@ -1,0 +1,118 @@
+{% extends 'base.html'%}
+
+
+{%block content%}
+
+<div class="row">
+    <div class="col">
+         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAlumno">
+            <i class="bi bi-plus-circle"></i> Añadir Alumno
+        </button>
+    </div>
+    <div class="col">
+        <form action="{{url_for('upload_csv')}}" method="POST" enctype="multipart/form-data">
+            <div class="row">
+                <input class="form form-control col" type="file" name="archivo-csv" accept=".csv">
+                <input class="btn btn-secondary col-md-4" type="submit" value="Subir">
+            </div>
+        </form>
+    </div>  
+</div>
+
+        <!-- Modal -->
+        <div class="modal fade" id="modalAlumno" tabindex="-1" aria-labelledby="modalAlumnoLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form action="{{ url_for('añadir_alumno') }}" method="POST">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modalAlumnoLabel">Agregar Nuevo Alumno</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre Completo</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" 
+                                       placeholder="Juan Pérez García" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="numero_control" class="form-label">Número de Control</label>
+                                <input type="text" class="form-control" id="numero_control" name="numero_control" 
+                                       placeholder="20210001" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="carrera" class="form-label">Carrera</label>
+                                <select class="form-select" id="carrera" name="carrera" required>
+                                    <option value="">Selecciona una carrera</option>
+                                    <option value="Ingeniería en Sistemas Computacionales">Ingeniería en Sistemas</option>
+                                    <option value="Ingeniería Industrial">Ingeniería Industrial</option>
+                                    <option value="Ingeniería Mecánica">Ingeniería Mecánica</option>
+                                    <option value="Ingeniería Electrónica">Ingeniería Electrónica</option>
+                                    <option value="Arquitectura">Arquitectura</option>
+                                </select>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="semestre" class="form-label">Semestre</label>
+                                    <input type="number" class="form-control" id="semestre" name="semestre" 
+                                           placeholder="1" min="1" max="12" required>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="reticula" class="form-label">Retícula</label>
+                                    <input type="text" class="form-control" id="reticula" name="reticula" 
+                                           placeholder="2021" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Alumno</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+<br>
+<table class="table table-bordered">
+  <thead>
+    <tr class="table-dark">
+      <th scope="col">Numero Control</th>
+      <th scope="col">Nombre</th>
+      <th scope="col">Carrera</th>
+      <th scope="col">Semestre</th>
+      <th scope="col">Reticula</th>
+      <th scope="col">
+        <div class="dropdown">
+        <button type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+            Estatus
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+            <li><a class="dropdown-item" href="#">Verificados</a></li>
+        </ul>
+        </div>
+      </th>
+    </tr>
+  </thead>
+  {% for alumno in alumnos %}
+  <tbody>
+    <tr>
+      <td>{{alumno['NUMERO_CONTROL']}}</td>
+      <td>{{alumno['NOMBRE']}}</td>
+      <td>{{alumno['CARRERA']}}</td>
+      <td>{{alumno['SEMESTRE']}}</td>
+      <td>{{alumno['AVANCE_RETICULAR']}}</td>
+        {% if alumno['ASISTENCIA'] == 1%}
+       <td>
+            <span class="badge bg-success">verificado</span>
+       </td>
+        {% endif %}
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{%endblock%}
