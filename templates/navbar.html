@@ -1,16 +1,37 @@
-<nav class="navbar navbar-expand-lg navbar-light" style="background-color: #213287;">
+<nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #213287;">
   <div class="container-fluid">
+    <a class="navbar-brand text-white" href="{{url_for('home')}}">
+      <strong>Sistema de Asistencia 2025</strong>
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" 
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
     <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav">
+      <ul class="navbar-nav ms-auto">
+        {% if session.user_id %}
         <li class="nav-item">
-            <a class="text-white nav-link active" href="{{url_for('home')}}" >Sistema de Asistencia 2025</a>
+            <a class="nav-link active" href="{{url_for('home')}}">Inicio</a>
         </li>
         <li class="nav-item">
-            <a class="text-white nav-link active" href="{{url_for('asistencia_qr')}}">Leer Qr</a>
+            <a class="nav-link active" href="{{url_for('asistencia_qr')}}">Leer QR</a>
+        </li>
+        {% endif %}
+        <li class="nav-item">
+            <a class="nav-link active" href="{{url_for('generar_qr')}}">Generar QR</a>
+        </li>
+        {% if session.user_id %}
+        <li class="nav-item">
+            <span class="nav-link active text-white">Usuario: {{ session.usuario }}</span>
         </li>
         <li class="nav-item">
-            <a class="text-white nav-link active" href="{{url_for('generar_qr')}}">Generar Qr</a>
+            <a class="nav-link active" href="{{url_for('logout')}}">Cerrar Sesión</a>
         </li>
+        {% else %}
+        <li class="nav-item">
+            <a class="nav-link active" href="{{url_for('login')}}">Iniciar Sesión</a>
+        </li>
+        {% endif %}
       </ul>
     </div>
   </div>

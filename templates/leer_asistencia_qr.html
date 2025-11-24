@@ -6,13 +6,24 @@
     .scanner-container {
         max-width: 600px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 15px;
     }
     
     h1 {
         text-align: center;
         color: #333;
         margin-bottom: 20px;
+        font-size: 1.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        h1 {
+            font-size: 1.25rem;
+        }
+        
+        .scanner-container {
+            padding: 10px;
+        }
     }
     
     #reader {
@@ -20,7 +31,14 @@
         border-radius: 10px;
         overflow: hidden;
         margin: 20px auto;
-        max-width: 500px;
+        max-width: 100%;
+        width: 100%;
+    }
+    
+    @media (max-width: 768px) {
+        #reader {
+            margin: 15px auto;
+        }
     }
     
     .controls {
@@ -28,6 +46,13 @@
         gap: 10px;
         justify-content: center;
         margin: 20px 0;
+        flex-wrap: wrap;
+    }
+    
+    @media (max-width: 768px) {
+        .controls {
+            margin: 15px 0;
+        }
     }
     
     button {
@@ -38,6 +63,17 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s;
+        min-width: 140px;
+    }
+    
+    @media (max-width: 768px) {
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            min-width: 120px;
+            flex: 1;
+            max-width: 48%;
+        }
     }
     
     #startBtn {
@@ -128,6 +164,90 @@
         background: #fef5e7;
         color: #7d6608;
     }
+    
+    .modal-content {
+        border-radius: 15px;
+    }
+    
+    .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+    }
+    
+    .modal-body {
+        padding: 30px;
+    }
+    
+    @media (max-width: 768px) {
+        .modal-body {
+            padding: 20px;
+        }
+    }
+    
+    .student-info {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+    
+    @media (max-width: 768px) {
+        .student-info {
+            padding: 15px;
+        }
+    }
+    
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #e9ecef;
+        flex-wrap: wrap;
+    }
+    
+    .info-row:last-child {
+        border-bottom: none;
+    }
+    
+    @media (max-width: 768px) {
+        .info-row {
+            flex-direction: column;
+            gap: 5px;
+        }
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    @media (max-width: 768px) {
+        .info-label {
+            font-size: 0.9rem;
+        }
+    }
+    
+    .info-value {
+        color: #212529;
+        word-break: break-word;
+        text-align: right;
+    }
+    
+    @media (max-width: 768px) {
+        .info-value {
+            text-align: left;
+            font-size: 0.95rem;
+        }
+    }
+    
+    .badge-success {
+        background-color: #28a745;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 14px;
+    }
 </style>
 
 <div class="scanner-container">
@@ -148,6 +268,50 @@
         <div class="result-label">Código detectado:</div>
         <div id="result-text" class="result-text"></div>
         <div id="server-response" style="margin-top: 15px;"></div>
+    </div>
+</div>
+
+<!-- Modal de Confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalLabel">
+                    <i class="bi bi-check-circle"></i> Asistencia Registrada
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="student-info">
+                    <div class="info-row">
+                        <span class="info-label">Número de Control:</span>
+                        <span class="info-value" id="modal-numero-control">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Nombre:</span>
+                        <span class="info-value" id="modal-nombre">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Carrera:</span>
+                        <span class="info-value" id="modal-carrera">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Estado:</span>
+                        <span class="info-value">
+                            <span class="badge-success" id="modal-estado">Verificado</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-success mb-0">
+                        <strong>✓ Asistencia registrada correctamente</strong>
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Aceptar</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -209,13 +373,28 @@
             console.log('Respuesta del servidor:', data);
             updateStatus('¡Código procesado exitosamente!', 'success');
             
-            // Mostrar respuesta del servidor
-            serverResponse.innerHTML = `
-                <div style="background: #e6fffa; padding: 10px; border-radius: 5px; border-left: 4px solid #38b2ac;">
-                    <strong>Respuesta del servidor:</strong><br>
-                    ${JSON.stringify(data, null, 2)}
-                </div>
-            `;
+            if (data.status === 'success' && data.alumno) {
+                // Llenar el modal con los datos del estudiante
+                document.getElementById('modal-numero-control').textContent = data.alumno.NUMERO_CONTROL || '-';
+                document.getElementById('modal-nombre').textContent = data.alumno.NOMBRE || '-';
+                document.getElementById('modal-carrera').textContent = data.alumno.CARRERA || '-';
+                
+                // Mostrar el modal
+                const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+                modal.show();
+                
+                // Ocultar el modal automáticamente después de 3 segundos
+                setTimeout(() => {
+                    modal.hide();
+                }, 3000);
+            } else {
+                // Si hay error, mostrar en el área de respuesta
+                serverResponse.innerHTML = `
+                    <div style="background: #fff5f5; padding: 10px; border-radius: 5px; border-left: 4px solid #fc8181;">
+                        <strong>Error:</strong> ${data.message || 'Error desconocido'}
+                    </div>
+                `;
+            }
             
             // Permitir escanear de nuevo después de 2 segundos
             setTimeout(() => {
@@ -255,16 +434,29 @@
         return cookieValue;
     }
 
+    // Función para calcular el tamaño del qrbox según el tamaño de pantalla
+    function getQrBoxSize() {
+        const width = window.innerWidth;
+        if (width < 400) {
+            return { width: 200, height: 200 };
+        } else if (width < 768) {
+            return { width: 250, height: 250 };
+        } else {
+            return { width: 300, height: 300 };
+        }
+    }
+
     // Iniciar escáner
     startBtn.addEventListener('click', async () => {
         try {
             html5QrCode = new Html5Qrcode("reader");
+            const qrboxSize = getQrBoxSize();
             
             await html5QrCode.start(
                 { facingMode: "environment" },
                 {
                     fps: 10,
-                    qrbox: { width: 250, height: 250 }
+                    qrbox: qrboxSize
                 },
                 escanear_qr,
                 onScanFailure
@@ -277,6 +469,16 @@
         } catch (err) {
             console.error("Error al iniciar la cámara:", err);
             updateStatus(`Error al iniciar cámara: ${err}`, 'error');
+        }
+    });
+    
+    // Ajustar tamaño del qrbox al cambiar el tamaño de la ventana
+    window.addEventListener('resize', () => {
+        if (html5QrCode && !stopBtn.disabled) {
+            // El escáner se ajustará automáticamente, pero podemos reiniciarlo si es necesario
+            const qrboxSize = getQrBoxSize();
+            // Nota: html5-qrcode no tiene un método directo para cambiar el tamaño,
+            // pero se ajustará automáticamente en el próximo escaneo
         }
     });
 

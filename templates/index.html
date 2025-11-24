@@ -3,25 +3,42 @@
 
 {%block content%}
 
-<div class="row">
-    <div class="col">
-         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalAlumno">
+<div class="row g-3 mb-3">
+    <div class="col-12 col-md-4">
+         <button type="button" class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#modalAlumno">
             <i class="bi bi-plus-circle"></i> Añadir Alumno
         </button>
     </div>
-    <div class="col">
+    <div class="col-12 col-md-4">
         <form action="{{url_for('upload_csv')}}" method="POST" enctype="multipart/form-data">
-            <div class="row">
-                <input class="form form-control col" type="file" name="archivo-csv" accept=".csv">
-                <input class="btn btn-secondary col-md-4" type="submit" value="Subir">
+            <div class="row g-2">
+                <div class="col-8">
+                    <input class="form-control" type="file" name="archivo-csv" accept=".csv">
+                </div>
+                <div class="col-4">
+                    <input class="btn btn-secondary w-100" type="submit" value="Importar CSV">
+                </div>
             </div>
+        </form>
+    </div>
+    <div class="col-12 col-md-4">
+        <form action="{{ url_for('exportar_csv') }}" method="GET">
+            <button type="submit" class="btn btn-dark w-100">Exportar CSV</button>
         </form>
     </div>  
 </div>
 
+<div class="row g-3 mb-3">
+    <div class="col-12">
+        <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#modalEliminarTodos">
+            <i class="bi bi-trash"></i> Eliminar Todos los Alumnos
+        </button>
+    </div>
+</div>
+
         <!-- Modal -->
         <div class="modal fade" id="modalAlumno" tabindex="-1" aria-labelledby="modalAlumnoLabel" aria-hidden="true">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
                 <div class="modal-content">
                     <form action="{{ url_for('añadir_alumno') }}" method="POST">
                         <div class="modal-header">
@@ -46,26 +63,16 @@
                                 <label for="carrera" class="form-label">Carrera</label>
                                 <select class="form-select" id="carrera" name="carrera" required>
                                     <option value="">Selecciona una carrera</option>
-                                    <option value="Ingeniería en Sistemas Computacionales">Ingeniería en Sistemas</option>
+                                    <option value="Ingeniería en Sistemas Computacionales">Ingeniería en Sistemas Computacionales</option>
                                     <option value="Ingeniería Industrial">Ingeniería Industrial</option>
                                     <option value="Ingeniería Mecánica">Ingeniería Mecánica</option>
                                     <option value="Ingeniería Electrónica">Ingeniería Electrónica</option>
-                                    <option value="Arquitectura">Arquitectura</option>
+                                    <option value="Ingeniería Civil">Ingeniería Civil</option>
+                                    <option value="Ingeniería en Gestion Empresarial">Ingeniería en Gestion Empresarial</option>
+                                    <option value="Licenciatura en Administracion">Licenciatura en Adminitracion</option>
+                                    <option value="Ingeniería Electrica">Ingeniería Electrica</option>
+                                    <option value="Ingeniería Quimica">Ingeniería Quimica</option>
                                 </select>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label for="semestre" class="form-label">Semestre</label>
-                                    <input type="number" class="form-control" id="semestre" name="semestre" 
-                                           placeholder="1" min="1" max="12" required>
-                                </div>
-                                
-                                <div class="col-md-6 mb-3">
-                                    <label for="reticula" class="form-label">Retícula</label>
-                                    <input type="text" class="form-control" id="reticula" name="reticula" 
-                                           placeholder="2021" required>
-                                </div>
                             </div>
                         </div>
                         
@@ -77,42 +84,210 @@
                 </div>
             </div>
         </div>
-<br>
-<table class="table table-bordered">
-  <thead>
-    <tr class="table-dark">
-      <th scope="col">Numero Control</th>
-      <th scope="col">Nombre</th>
-      <th scope="col">Carrera</th>
-      <th scope="col">Semestre</th>
-      <th scope="col">Reticula</th>
-      <th scope="col">
-        <div class="dropdown">
-        <button type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+
+        <!-- Modal Eliminar Todos -->
+        <div class="modal fade" id="modalEliminarTodos" tabindex="-1" aria-labelledby="modalEliminarTodosLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="modalEliminarTodosLabel">
+                            <i class="bi bi-exclamation-triangle"></i> Confirmar Eliminación
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="fw-bold">¿Estás seguro de que deseas eliminar TODOS los alumnos?</p>
+                        <p class="text-danger">Esta acción no se puede deshacer. Se eliminarán todos los registros de alumnos de la base de datos.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <form action="{{ url_for('eliminar_todos_alumnos') }}" method="POST" style="display: inline;">
+                            <button type="submit" class="btn btn-danger">Sí, Eliminar Todos</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+<style>
+    /* Cards para móviles */
+    @media (max-width: 768px) {
+        .table-desktop {
+            display: none;
+        }
+        
+        .card-mobile {
+            display: block;
+        }
+        
+        .student-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .student-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .student-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .student-info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label-mobile {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .info-value-mobile {
+            color: #212529;
+            text-align: right;
+            word-break: break-word;
+        }
+    }
+    
+    @media (min-width: 769px) {
+        .card-mobile {
+            display: none;
+        }
+        
+        .table-desktop {
+            display: table;
+        }
+    }
+    
+    .filter-buttons-mobile {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+</style>
+
+<!-- Filtros para móviles -->
+<div class="filter-buttons-mobile d-md-none">
+    <div class="dropdown">
+        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" id="dropdownCarreraMobile" data-bs-toggle="dropdown" aria-expanded="false">
+            Carrera
+        </button>
+        <ul class="dropdown-menu" aria-labelledby="dropdownCarreraMobile">
+            <li><a class="dropdown-item" href="{{ url_for('home') }}">Todas</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería en Sistemas Computacionales') }}">Ingeniería en Sistemas</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Industrial') }}">Ingeniería Industrial</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Mecánica') }}">Ingeniería Mecánica</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Electrónica') }}">Ingeniería Electrónica</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Civil') }}">Ingeniería Civil</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería en Gestion Empresarial') }}">Gestión Empresarial</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Licenciatura en Administracion') }}">Licenciatura en Administración</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Electrica') }}">Ingeniería Eléctrica</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Quimica') }}">Ingeniería Química</a></li>
+        </ul>
+    </div>
+    <div class="dropdown">
+        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" id="dropdownEstatusMobile" data-bs-toggle="dropdown" aria-expanded="false">
             Estatus
         </button>
-        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
-            <li><a class="dropdown-item" href="#">Verificados</a></li>
+        <ul class="dropdown-menu" aria-labelledby="dropdownEstatusMobile">
+            <li><a class="dropdown-item" href="{{ url_for('home') }}">Todos</a></li>
+            <li><a class="dropdown-item" href="{{ url_for('filtro_asistencia') }}">Verificados</a></li>
         </ul>
+    </div>
+</div>
+
+<!-- Vista de tabla para desktop -->
+<div class="table-desktop">
+    <table class="table table-bordered table-hover w-100">
+      <thead>
+        <tr class="table-dark">
+          <th scope="col">Numero Control</th>
+          <th scope="col">Nombre</th>
+          <th scope="col">
+            <div class="dropdown">
+            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" id="dropdownCarrera" data-bs-toggle="dropdown" aria-expanded="false">
+                Carrera
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownCarrera">
+                <li><a class="dropdown-item" href="{{ url_for('home') }}">Todas</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería en Sistemas Computacionales') }}">Ingeniería en Sistemas</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Industrial') }}">Ingeniería Industrial</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Mecánica') }}">Ingeniería Mecánica</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Electrónica') }}">Ingeniería Electrónica</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Civil') }}">Ingeniería Civil</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería en Gestion Empresarial') }}">Gestión Empresarial</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Licenciatura en Administracion') }}">Licenciatura en Administración</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Electrica') }}">Ingeniería Eléctrica</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_carrera', carrera='Ingeniería Quimica') }}">Ingeniería Química</a></li>
+            </ul>
+            </div>
+          </th>
+          <th scope="col">
+            <div class="dropdown">
+            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+                Estatus
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1">
+                <li><a class="dropdown-item" href="{{ url_for('home') }}">Todos</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('filtro_asistencia') }}">Verificados</a></li>
+            </ul>
+            </div>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for alumno in alumnos %}
+        <tr>
+          <td>{{alumno['NUMERO_CONTROL']}}</td>
+          <td>{{alumno['NOMBRE']}}</td>
+          <td>{{alumno['CARRERA']}}</td>
+          <td>
+            {% if alumno['ASISTENCIA'] == 1 %}
+                <span class="badge bg-success">Verificado</span>
+            {% else %}
+                <span class="badge bg-secondary">Pendiente</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+</div>
+
+<!-- Vista de cards para móviles -->
+<div class="card-mobile">
+    {% for alumno in alumnos %}
+    <div class="student-card">
+        <div class="student-card-header">
+            <strong>{{alumno['NUMERO_CONTROL']}}</strong>
+            {% if alumno['ASISTENCIA'] == 1 %}
+                <span class="badge bg-success">Verificado</span>
+            {% else %}
+                <span class="badge bg-secondary">Pendiente</span>
+            {% endif %}
         </div>
-      </th>
-    </tr>
-  </thead>
-  {% for alumno in alumnos %}
-  <tbody>
-    <tr>
-      <td>{{alumno['NUMERO_CONTROL']}}</td>
-      <td>{{alumno['NOMBRE']}}</td>
-      <td>{{alumno['CARRERA']}}</td>
-      <td>{{alumno['SEMESTRE']}}</td>
-      <td>{{alumno['AVANCE_RETICULAR']}}</td>
-        {% if alumno['ASISTENCIA'] == 1%}
-       <td>
-            <span class="badge bg-success">verificado</span>
-       </td>
-        {% endif %}
-    </tr>
+        <div class="student-info-item">
+            <span class="info-label-mobile">Nombre:</span>
+            <span class="info-value-mobile">{{alumno['NOMBRE']}}</span>
+        </div>
+        <div class="student-info-item">
+            <span class="info-label-mobile">Carrera:</span>
+            <span class="info-value-mobile">{{alumno['CARRERA']}}</span>
+        </div>
+    </div>
     {% endfor %}
-  </tbody>
-</table>
+</div>
 {%endblock%}
