@@ -1,6 +1,6 @@
 from flask import Flask, request, render_template, jsonify, url_for, redirect, flash, Response, session
 import pandas as pd
-from db import get_db
+from db import get_db, close_db
 import qrcode
 import io
 import base64
@@ -15,14 +15,16 @@ app = Flask(__name__)
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'csv'}
-app.secret_key = 'tu_clave_secreta_aqui'
+app.secret_key = os.environ.get('SECRET_KEY', 'tu_clave_secreta_aqui_cambiar_en_produccion')
+
+# Registrar función para cerrar conexiones de BD
+app.teardown_appcontext(close_db)
 
 #Creamos carpeta de uploads si no existe
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Inicializar tabla de usuarios
 def init_users_table():
-    """Crea la tabla de usuarios si no existe y añade el usuario administrador por defecto"""
     db = get_db()
     cursor = db.cursor()
     
@@ -48,6 +50,23 @@ def init_users_table():
     
     db.commit()
 
+# Inicializar tabla de alumnos
+def init_alumnos_table():
+    db = get_db()
+    cursor = db.cursor()
+    
+    # Crear tabla de alumnos si no existe
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS ALUMNOS (
+            NUMERO_CONTROL TEXT PRIMARY KEY,
+            NOMBRE TEXT NOT NULL,
+            CARRERA TEXT,
+            ASISTENCIA INTEGER DEFAULT 0
+        )
+    ''')
+    
+    db.commit()
+
 # Decorador para verificar si el usuario está logueado
 def login_required(f):
     @wraps(f)
@@ -58,9 +77,10 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# Inicializar la tabla de usuarios al iniciar la aplicación
+# Inicializar las tablas al iniciar la aplicación
 with app.app_context():
     init_users_table()
+    init_alumnos_table()
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
