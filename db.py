@@ -5,7 +5,7 @@ import psycopg2.extras
 from flask import g
 
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get('postgres://root:857oq5STWMhCKnISy2mTZ1mJnjMfnwXe@localhost:5432/servicio_y6u5')
 
 
 def get_db():
