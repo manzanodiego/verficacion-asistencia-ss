@@ -1,29 +1,17 @@
-import os
+import sqlite3
+from datetime import datetime
 
-import psycopg2
-import psycopg2.extras
 from flask import g
 
 
-DATABASE_URL = os.environ.get('postgres://root:857oq5STWMhCKnISy2mTZ1mJnjMfnwXe@localhost:5432/servicio_y6u5')
-
+DATABASE = 'servicio.db'
 
 def get_db():
     if 'db' not in g:
-        if not DATABASE_URL:
-            raise RuntimeError(
-                'DATABASE_URL environment variable must be defined for PostgreSQL connections'
-            )
-        g.db = psycopg2.connect(
-            DATABASE_URL,
-            cursor_factory=psycopg2.extras.RealDictCursor,
-        )
-        g.db.autocommit = False
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
     return g.db
 
-
-def get_cursor():
-    return get_db().cursor()
 
 
 def close_db(exception):

@@ -1,9 +1,10 @@
 from flask import Flask, request, render_template, jsonify, url_for, redirect, flash, Response, session
 import pandas as pd
-from db import get_db, close_db, get_cursor
+from db import get_db, close_db
 import qrcode
 import io
 import base64
+import sqlite3
 import os
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -25,35 +26,34 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Inicializar tabla de usuarios
 def init_users_table():
     db = get_db()
-    cursor = get_cursor()
+    cursor = db.cursor()
     
     # Crear tabla de usuarios si no existe
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS usuarios (
-            id SERIAL PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario TEXT UNIQUE NOT NULL,
-            contrasena TEXT NOT NULL
+            contraseña TEXT NOT NULL
         )
     ''')
     
     # Verificar si el usuario administrador ya existe
-    cursor.execute('SELECT usuario FROM usuarios WHERE usuario = %s', ('admi-asistencia25',))
+    cursor.execute('SELECT usuario FROM usuarios WHERE usuario = ?', ('admi-asistencia25',))
     if not cursor.fetchone():
         # Crear hash de la contraseña
         password_hash = generate_password_hash('servicio25')
         # Insertar usuario administrador
         cursor.execute(
-            'INSERT INTO usuarios (usuario, contrasena) VALUES (%s, %s)',
+            'INSERT INTO usuarios (usuario, contraseña) VALUES (?, ?)',
             ('admi-asistencia25', password_hash)
         )
     
     db.commit()
-    cursor.close()
 
 # Inicializar tabla de alumnos
 def init_alumnos_table():
     db = get_db()
-    cursor = get_cursor()
+    cursor = db.cursor()
     
     # Crear tabla de alumnos si no existe
     cursor.execute('''
@@ -66,7 +66,6 @@ def init_alumnos_table():
     ''')
     
     db.commit()
-    cursor.close()
 
 # Decorador para verificar si el usuario está logueado
 def login_required(f):
@@ -94,14 +93,14 @@ def login():
             return render_template('login.html')
         
         db = get_db()
-        cursor = get_cursor()
+        cursor = db.cursor()
         
         # Buscar usuario en la base de datos
-        cursor.execute('SELECT * FROM usuarios WHERE usuario = %s', (usuario,))
+        cursor.execute('SELECT * FROM usuarios WHERE usuario = ?', (usuario,))
         user = cursor.fetchone()
-        cursor.close()
+        db.close()
         
-        if user and check_password_hash(user['contrasena'], contraseña):
+        if user and check_password_hash(user['contraseña'], contraseña):
             # Iniciar sesión
             session['user_id'] = user['id']
             session['usuario'] = user['usuario']
@@ -123,10 +122,8 @@ def logout():
 @app.route("/")
 @login_required
 def home():
-    cursor = get_cursor()
-    cursor.execute('SELECT * FROM ALUMNOS')
-    alumnos = cursor.fetchall()
-    cursor.close()
+    db = get_db()
+    alumnos = db.execute('SELECT * FROM ALUMNOS').fetchall()
     return render_template('index.html', alumnos=alumnos)
 
 
@@ -174,17 +171,17 @@ def leer_qr():
         print(f'Código QR recibido: {numero_control}')
         
         db = get_db()
-        cursor = get_cursor()
+        cursor = db.cursor()
         
         # Primero verificar si el alumno existe
         cursor.execute(
-            'SELECT * FROM ALUMNOS WHERE NUMERO_CONTROL = %s', 
+            'SELECT * FROM ALUMNOS WHERE NUMERO_CONTROL = ?', 
             (numero_control,)
         )
         alumno = cursor.fetchone()
         
         if not alumno:
-            cursor.close()
+            db.close()
             return jsonify({
                 "status": "error",
                 "message": f"Alumno con número de control {numero_control} no encontrado"
@@ -192,18 +189,19 @@ def leer_qr():
         
         # Actualizar asistencia (sintaxis SQL corregida)
         cursor.execute(
-            'UPDATE ALUMNOS SET ASISTENCIA = 1 WHERE NUMERO_CONTROL = %s', 
+            'UPDATE ALUMNOS SET ASISTENCIA = 1 WHERE NUMERO_CONTROL = ?', 
             (numero_control,)
         )
         db.commit()
         
         # Obtener información actualizada del alumno
         cursor.execute(
-            'SELECT * FROM ALUMNOS WHERE NUMERO_CONTROL = %s',
+            'SELECT * FROM ALUMNOS WHERE NUMERO_CONTROL = ?',
             (numero_control,)
         )
         alumno_actualizado = cursor.fetchone()
-        cursor.close()
+        
+        db.close()
         
         # Convertir row a diccionario
         alumno_dict = dict(alumno_actualizado)
@@ -240,32 +238,35 @@ def añadir_alumno():
                 return redirect(url_for('home'))
             
             db = get_db()
-            cursor = get_cursor()
+            cursor = db.cursor()
             
             # Verificar si el número de control ya existe
             cursor.execute(
-                'SELECT NUMERO_CONTROL FROM ALUMNOS WHERE NUMERO_CONTROL = %s',
+                'SELECT NUMERO_CONTROL FROM ALUMNOS WHERE NUMERO_CONTROL = ?',
                 (numero_control,)
             )
             if cursor.fetchone():
                 #flash(f'El número de control {numero_control} ya existe', 'error')
-                cursor.close()
+                db.close()
                 return redirect(url_for('home'))
             
             # Insertar nuevo alumno (con coma después del VALUES)
             cursor.execute(
                 '''INSERT INTO ALUMNOS(NUMERO_CONTROL, NOMBRE, CARRERA) 
-                   VALUES(%s, %s, %s)''',
+                   VALUES(?, ?, ?)''',
                 (numero_control, nombre, carrera)
             )
             db.commit()
-            cursor.close()
+            db.close()
             
             return redirect(url_for('home'))
 
-        except Exception:
-            if 'cursor' in locals():
-                cursor.close()
+        except sqlite3.Error as e:
+            db.close()
+            return redirect(url_for('home'))
+        except Exception as e:
+            if 'db' in locals():
+                db.close()
             return redirect(url_for('home'))   
     
     # Si es GET, mostrar el template
@@ -282,8 +283,8 @@ def insertar_csv_db(csv_path):
         df = pd.read_csv(csv_path)
 
         # Mapear columnas del CSV a columnas de la base de datos
-        # Las columnas esperadas en la BD son: NUMERO_CONTROL, NOMBRE, CARRERA, SEMESTRE, AVANCE_RETICULAR
-        columnas_bd = ['NUMERO_CONTROL', 'NOMBRE', 'CARRERA']
+        # Las columnas esperadas en la BD son: NUMERO_CONTROL, NOMBRE, CARRERA, ASISTENCIA
+        columnas_bd = ['NUMERO_CONTROL', 'NOMBRE', 'CARRERA', 'ASISTENCIA']
         
         # Normalizar nombres de columnas del CSV (convertir a mayúsculas y sin espacios)
         df.columns = df.columns.str.strip().str.upper()
@@ -294,7 +295,7 @@ def insertar_csv_db(csv_path):
             return False, f"Faltan las siguientes columnas en el CSV: {', '.join(columnas_faltantes)}"
         
         db = get_db()
-        cursor = get_cursor()
+        cursor = db.cursor()
         
         registros_insertados = 0
         registros_duplicados = 0
@@ -305,12 +306,18 @@ def insertar_csv_db(csv_path):
                 numero_control = str(row['NUMERO_CONTROL']).strip()
                 nombre = str(row['NOMBRE']).strip()
                 carrera = str(row['CARRERA']).strip()
-                #semestre = str(row['SEMESTRE']).strip()
-                #reticula = str(row['AVANCE_RETICULAR']).strip()
+                asistencia_valor = row['ASISTENCIA']
+                if pd.notna(asistencia_valor) and str(asistencia_valor).strip() != '':
+                    try:
+                        asistencia = int(float(asistencia_valor))
+                    except (ValueError, TypeError):
+                        asistencia = 0
+                else:
+                    asistencia = 0
                 
                 # Verificar si el número de control ya existe
                 cursor.execute(
-                    'SELECT NUMERO_CONTROL FROM ALUMNOS WHERE NUMERO_CONTROL = %s',
+                    'SELECT NUMERO_CONTROL FROM ALUMNOS WHERE NUMERO_CONTROL = ?',
                     (numero_control,)
                 )
                 if cursor.fetchone():
@@ -319,9 +326,9 @@ def insertar_csv_db(csv_path):
                 
                 # Insertar nuevo alumno
                 cursor.execute(
-                    '''INSERT INTO ALUMNOS(NUMERO_CONTROL, NOMBRE, CARRERA) 
-                       VALUES(%s, %s, %s)''',
-                    (numero_control, nombre, carrera)
+                    '''INSERT INTO ALUMNOS(NUMERO_CONTROL, NOMBRE, CARRERA, ASISTENCIA) 
+                       VALUES(?, ?, ?, ?)''',
+                    (numero_control, nombre, carrera, asistencia)
                 )
                 registros_insertados += 1
                 
@@ -330,7 +337,7 @@ def insertar_csv_db(csv_path):
                 continue
         
         db.commit()
-        cursor.close()
+        db.close()
         
         mensaje = f"Se insertaron {registros_insertados} registros correctamente"
         if registros_duplicados > 0:
@@ -341,8 +348,6 @@ def insertar_csv_db(csv_path):
         return True, mensaje
 
     except Exception as e:
-        if 'cursor' in locals():
-            cursor.close()
         return False, f"Error al insertar datos: {str(e)}"
 
 
@@ -350,10 +355,9 @@ def insertar_csv_db(csv_path):
 @login_required
 def exportar_csv():
     try:
-        cursor = get_cursor()
-        cursor.execute('SELECT * FROM ALUMNOS')
-        alumnos = cursor.fetchall()
-        cursor.close()
+        db = get_db()
+        alumnos = db.execute('SELECT * FROM ALUMNOS').fetchall()
+        db.close()
         
         # Convertir a DataFrame
         df = pd.DataFrame([dict(row) for row in alumnos])
@@ -427,21 +431,17 @@ def upload_csv():
 @app.route('/filtro_asistencia', methods=['GET'])
 @login_required
 def filtro_asistencia():
-    cursor = get_cursor()
-    cursor.execute('SELECT * FROM ALUMNOS WHERE ASISTENCIA = 1')
-    alumnos = cursor.fetchall()
-    cursor.close()
+    db = get_db()
+    alumnos = db.execute('SELECT * FROM ALUMNOS WHERE ASISTENCIA = 1').fetchall()
     return render_template('index.html', alumnos=alumnos)
 
 
 @app.route('/filtro_carrera/<string:carrera>/', methods=['GET'])
 @login_required
 def filtro_carrera(carrera):
+    db = get_db()
     carrera = carrera.upper()
-    cursor = get_cursor()
-    cursor.execute('SELECT * FROM ALUMNOS WHERE CARRERA = %s', (carrera,))
-    alumnos = cursor.fetchall()
-    cursor.close()
+    alumnos = db.execute('SELECT * FROM ALUMNOS WHERE CARRERA = ?', (carrera, )).fetchall()
     return render_template('index.html', alumnos=alumnos)
 
 
@@ -450,7 +450,7 @@ def filtro_carrera(carrera):
 def eliminar_todos_alumnos():
     try:
         db = get_db()
-        cursor = get_cursor()
+        cursor = db.cursor()
         
         # Contar cuántos alumnos se van a eliminar
         cursor.execute('SELECT COUNT(*) as total FROM ALUMNOS')
@@ -459,7 +459,7 @@ def eliminar_todos_alumnos():
         # Eliminar todos los alumnos
         cursor.execute('DELETE FROM ALUMNOS')
         db.commit()
-        cursor.close()
+        db.close()
         
         flash(f'Se eliminaron {total} alumnos correctamente', 'success')
     except Exception as e:
@@ -472,3 +472,4 @@ if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    #app.run(host='0.0.0.0', debug=True)
